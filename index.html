@@ -1,15 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Vibrate Example</title>
+  <title>Vibration Pattern - We Will Rock You</title>
 </head>
 <body>
-  <button onclick="vibrate()">Vibrate</button>
+  <h2>Vibration: "We Will Rock You" Pattern</h2>
+  <button onclick="playVibe()">Play Beat</button>
 
   <script>
-    function vibrate() {
+    function playVibe() {
       if ("vibrate" in navigator) {
-        navigator.vibrate([200, 100, 200]); // Vibrate 200ms, pause 100ms, vibrate 200ms
+        // Simulate: Boom Boom Clap (repeated)
+        // Vibration in ms: [vibrate, pause, vibrate, pause, vibrate, pause...]
+        const pattern = [
+          300, 150,   // Boom
+          300, 150,   // Boom
+          100, 400,   // Clap
+          300, 150,   // Boom
+          300, 150,   // Boom
+          100, 400    // Clap
+        ];
+        navigator.vibrate(pattern);
       } else {
         alert("Vibration not supported on this device.");
       }
