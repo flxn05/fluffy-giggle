@@ -3,12 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>📷 Pro Camera Web App</title>
+  <title>🚀 Futuristic Camera App</title>
   <style>
+    :root {
+      --primary: #03dac6;
+      --bg-dark: #121212;
+      --button-bg: #1f1f1f;
+      --button-hover: #2c2c2c;
+    }
+
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background-color: #121212;
+      background-color: var(--bg-dark);
       color: #ffffff;
       display: flex;
       flex-direction: column;
@@ -24,10 +31,10 @@
     #camera-container {
       width: 100%;
       max-width: 400px;
-      border-radius: 12px;
+      border-radius: 20px;
       overflow: hidden;
       background: #1e1e1e;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
       position: relative;
     }
 
@@ -41,7 +48,7 @@
     }
 
     .controls {
-      margin-top: 12px;
+      margin-top: 16px;
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
@@ -49,97 +56,123 @@
     }
 
     button {
-      padding: 12px 18px;
-      font-size: 15px;
       border: none;
-      border-radius: 8px;
-      background-color: #03dac6;
-      color: #000;
-      font-weight: bold;
+      background: var(--button-bg);
+      color: white;
+      border-radius: 50%;
+      width: 64px;
+      height: 64px;
+      font-size: 28px;
       cursor: pointer;
       transition: background 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     button:hover {
-      background-color: #00c4b4;
+      background-color: var(--button-hover);
     }
 
-    #snapshot {
+    #snapshot, #recording {
       margin-top: 20px;
       max-width: 400px;
       width: 100%;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      border-radius: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
     }
 
-    #downloadBtn {
-      display: none;
+    .popup {
+      position: fixed;
+      bottom: 20px;
+      background: #2a2a2a;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.4s ease;
+      pointer-events: none;
+    }
+
+    .popup.show {
+      opacity: 1;
+      transform: translateY(0);
     }
   </style>
 </head>
 <body>
 
-  <h1>📸 Camera App (Dark Mode)</h1>
+  <h1>📸 Futuristic Camera</h1>
 
   <div id="camera-container">
     <video id="video" autoplay playsinline></video>
   </div>
 
   <div class="controls">
-    <button onclick="capturePhoto()">📷 Capture</button>
-    <button onclick="toggleCamera()">🔄 Switch Camera</button>
-    <button id="downloadBtn" onclick="downloadImage()">⬇️ Download</button>
+    <button id="captureBtn" title="Capture">📷</button>
+    <button id="switchBtn" title="Switch Camera">🔄</button>
+    <button id="recordBtn" title="Start/Stop Recording">🎥</button>
+    <button id="downloadBtn" style="display:none;" title="Download">⬇️</button>
   </div>
 
   <canvas id="canvas" style="display:none;"></canvas>
-  <img id="snapshot" alt="Your captured photo will appear here" />
+  <img id="snapshot" alt="Captured image will appear here" />
+  <video id="recording" controls style="display:none;"></video>
+
+  <div id="popup" class="popup"></div>
 
   <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const snapshot = document.getElementById('snapshot');
+    const recording = document.getElementById('recording');
+    const popup = document.getElementById('popup');
     const downloadBtn = document.getElementById('downloadBtn');
 
-    let currentStream = null;
-    let usingFrontCamera = false;
+    const captureBtn = document.getElementById('captureBtn');
+    const switchBtn = document.getElementById('switchBtn');
+    const recordBtn = document.getElementById('recordBtn');
 
-    async function initCamera(facingMode = 'environment') {
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
+    let stream = null;
+    let usingFront = false;
+    let mediaRecorder = null;
+    let chunks = [];
+
+    function showPopup(message) {
+      popup.textContent = message;
+      popup.classList.add('show');
+      setTimeout(() => popup.classList.remove('show'), 3000);
+    }
+
+    async function startCamera(facing = 'environment') {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
       }
 
       try {
-        const constraints = {
-          video: {
-            facingMode: { exact: facingMode },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        };
-
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        currentStream = stream;
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: facing } },
+          audio: true
+        });
         video.srcObject = stream;
-
-        // Flip video preview for front camera
-        video.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+        video.style.transform = facing === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
       } catch (err) {
-        alert("Error accessing camera: " + err.message);
+        alert("Camera permission denied.");
+        showPopup("🚫 Permission denied.");
       }
     }
 
     function capturePhoto() {
+      const ctx = canvas.getContext('2d');
       const width = video.videoWidth;
       const height = video.videoHeight;
 
       canvas.width = width;
       canvas.height = height;
 
-      const ctx = canvas.getContext('2d');
-
-      if (usingFrontCamera) {
-        // Mirror the photo for front cam
+      if (usingFront) {
         ctx.translate(width, 0);
         ctx.scale(-1, 1);
       }
@@ -148,25 +181,69 @@
 
       const dataURL = canvas.toDataURL('image/png');
       snapshot.src = dataURL;
+      snapshot.style.display = 'block';
+      recording.style.display = 'none';
+
       downloadBtn.style.display = 'inline-block';
       downloadBtn.dataset.url = dataURL;
+      downloadBtn.dataset.type = 'image';
     }
 
     function toggleCamera() {
-      usingFrontCamera = !usingFrontCamera;
-      const mode = usingFrontCamera ? 'user' : 'environment';
-      initCamera(mode);
+      usingFront = !usingFront;
+      startCamera(usingFront ? 'user' : 'environment');
+    }
+
+    function toggleRecording() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        recordBtn.textContent = '🎥';
+        return;
+      }
+
+      if (!stream) return;
+
+      chunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+
+        recording.src = url;
+        recording.style.display = 'block';
+        snapshot.style.display = 'none';
+
+        downloadBtn.style.display = 'inline-block';
+        downloadBtn.dataset.url = url;
+        downloadBtn.dataset.type = 'video';
+
+        showPopup("🎬 Video saved!");
+      };
+
+      mediaRecorder.start();
+      recordBtn.textContent = '⏹️';
     }
 
     function downloadImage() {
-      const link = document.createElement('a');
-      link.href = downloadBtn.dataset.url;
-      link.download = 'snapshot.png';
-      link.click();
+      const a = document.createElement('a');
+      a.href = downloadBtn.dataset.url;
+      a.download = downloadBtn.dataset.type === 'video' ? 'recording.webm' : 'snapshot.png';
+      a.click();
+      showPopup("✅ Download successful!");
     }
 
+    captureBtn.addEventListener('click', capturePhoto);
+    switchBtn.addEventListener('click', toggleCamera);
+    recordBtn.addEventListener('click', toggleRecording);
+    downloadBtn.addEventListener('click', downloadImage);
+
     window.addEventListener('DOMContentLoaded', () => {
-      initCamera('environment');
+      startCamera('environment');
     });
   </script>
 
