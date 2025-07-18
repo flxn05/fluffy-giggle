@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>📷 Pro Camera Web App</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 16px;
+      font-size: 1.5rem;
+    }
+
+    #camera-container {
+      width: 100%;
+      max-width: 400px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #1e1e1e;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: black;
+      transform: scaleX(1);
+      transition: transform 0.3s ease;
+    }
+
+    .controls {
+      margin-top: 12px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      padding: 12px 18px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      background-color: #03dac6;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #00c4b4;
+    }
+
+    #snapshot {
+      margin-top: 20px;
+      max-width: 400px;
+      width: 100%;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    #downloadBtn {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📸 Camera App (Dark Mode)</h1>
+
+  <div id="camera-container">
+    <video id="video" autoplay playsinline></video>
+  </div>
+
+  <div class="controls">
+    <button onclick="capturePhoto()">📷 Capture</button>
+    <button onclick="toggleCamera()">🔄 Switch Camera</button>
+    <button id="downloadBtn" onclick="downloadImage()">⬇️ Download</button>
+  </div>
+
+  <canvas id="canvas" style="display:none;"></canvas>
+  <img id="snapshot" alt="Your captured photo will appear here" />
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const snapshot = document.getElementById('snapshot');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let currentStream = null;
+    let usingFrontCamera = false;
+
+    async function initCamera(facingMode = 'environment') {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+
+      try {
+        const constraints = {
+          video: {
+            facingMode: { exact: facingMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        };
+
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        currentStream = stream;
+        video.srcObject = stream;
+
+        // Flip video preview for front camera
+        video.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+      } catch (err) {
+        alert("Error accessing camera: " + err.message);
+      }
+    }
+
+    function capturePhoto() {
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+
+      if (usingFrontCamera) {
+        // Mirror the photo for front cam
+        ctx.translate(width, 0);
+        ctx.scale(-1, 1);
+      }
+
+      ctx.drawImage(video, 0, 0, width, height);
+
+      const dataURL = canvas.toDataURL('image/png');
+      snapshot.src = dataURL;
+      downloadBtn.style.display = 'inline-block';
+      downloadBtn.dataset.url = dataURL;
+    }
+
+    function toggleCamera() {
+      usingFrontCamera = !usingFrontCamera;
+      const mode = usingFrontCamera ? 'user' : 'environment';
+      initCamera(mode);
+    }
+
+    function downloadImage() {
+      const link = document.createElement('a');
+      link.href = downloadBtn.dataset.url;
+      link.download = 'snapshot.png';
+      link.click();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initCamera('environment');
+    });
+  </script>
+
+</body>
+</html>
