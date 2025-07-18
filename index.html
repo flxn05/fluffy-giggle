@@ -1,29 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Vibration Pattern - We Will Rock You</title>
+  <meta charset="UTF-8">
+  <title>Exponential Vibration Pattern</title>
 </head>
 <body>
-  <h2>Vibration: "We Will Rock You" Pattern</h2>
-  <button onclick="playVibe()">Play Beat</button>
+  <h2>Exponential Acceleration Vibration</h2>
+  <button onclick="startVibration()">Start</button>
 
   <script>
-    function playVibe() {
-      if ("vibrate" in navigator) {
-        // Simulate: Boom Boom Clap (repeated)
-        // Vibration in ms: [vibrate, pause, vibrate, pause, vibrate, pause...]
-        const pattern = [
-          300, 150,   // Boom
-          300, 150,   // Boom
-          100, 400,   // Clap
-          300, 150,   // Boom
-          300, 150,   // Boom
-          100, 400    // Clap
-        ];
-        navigator.vibrate(pattern);
-      } else {
-        alert("Vibration not supported on this device.");
+    function startVibration() {
+      if (!("vibrate" in navigator)) {
+        alert("Vibration API not supported on this device.");
+        return;
       }
+
+      const totalTime = 8000; // total time in ms
+      const steps = 30;       // number of steps to accelerate over
+
+      const pattern = [];
+
+      // Loop through steps, reducing vibration and pause times exponentially
+      for (let i = 0; i < steps; i++) {
+        // Ratio from 0 (start) to 1 (end)
+        const t = i / (steps - 1);
+
+        // Exponential decay of time (starts slow, ends fast)
+        const vibrateTime = 400 * Math.pow(1 - t, 2) + 30; // From ~430ms to ~30ms
+        const pauseTime   = 400 * Math.pow(1 - t, 2);      // From ~400ms to ~0ms
+
+        pattern.push(Math.round(vibrateTime));
+        pattern.push(Math.round(pauseTime));
+      }
+
+      navigator.vibrate(pattern);
     }
   </script>
 </body>
