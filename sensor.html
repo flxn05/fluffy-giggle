@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ambient Light Reactive Chat</title>
+<style>
+  /* WhatsApp-like basic styling */
+  body {
+    margin: 0; padding: 0; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: #ece5dd;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .chat-container {
+    background: white;
+    width: 360px;
+    height: 600px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px #999;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  .header {
+    font-weight: 700;
+    font-size: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #ddd;
+  }
+  .messages {
+    flex-grow: 1;
+    padding: 12px 0;
+    overflow-y: auto;
+  }
+  .message {
+    max-width: 70%;
+    margin-bottom: 12px;
+    padding: 12px 16px;
+    border-radius: 20px;
+    background: #dcf8c6; /* default WhatsApp green bubble */
+    color: #000;
+    font-size: 16px;
+    line-height: 1.4;
+    box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+    transition: background-color 0.5s ease, color 0.5s ease;
+    user-select: none;
+  }
+  .status {
+    font-size: 14px;
+    color: #555;
+    text-align: center;
+    margin-top: 8px;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<div class="chat-container">
+  <div class="header">WhatsApp</div>
+  <div class="messages">
+    <div id="msg1" class="message">
+      Hey there! This message will change color based on ambient light.
+    </div>
+  </div>
+  <div id="status" class="status">
+    Requesting Ambient Light Sensor permission...
+  </div>
+</div>
+
+<script>
+  const msg = document.getElementById('msg1');
+  const status = document.getElementById('status');
+
+  // Utility: interpolate between two colors based on t=0..1
+  function lerpColor(a, b, t) {
+    // a,b = hex color strings like "#aabbcc"
+    const c1 = hexToRgb(a);
+    const c2 = hexToRgb(b);
+    const r = Math.round(c1.r + (c2.r - c1.r) * t);
+    const g = Math.round(c1.g + (c2.g - c1.g) * t);
+    const b_ = Math.round(c1.b + (c2.b - c1.b) * t);
+    return `rgb(${r},${g},${b_})`;
+  }
+  function hexToRgb(hex) {
+    // Remove # if present
+    hex = hex.replace(/^#/,'');
+    return {
+      r: parseInt(hex.substring(0,2),16),
+      g: parseInt(hex.substring(2,4),16),
+      b: parseInt(hex.substring(4,6),16)
+    };
+  }
+
+  // Define color stops for the "sunset" gradient for background
+  // Dark night green to light daytime green:
+  const bgDark = '#264d00';   // deep dark green (night)
+  const bgMid  = '#7ee667';   // medium green (dusk/dawn)
+  const bgLight= '#dcf8c6';   // WhatsApp light green (day)
+
+  // Text colors: dark text in bright, light text in dark
+  const textDark = '#000000';
+  const textLight = '#e0f2f1';
+
+  // Map lux to t=0..1 (0 = dark, 1000+ = very bright)
+  function normalizeLux(lux) {
+    // Clamp lux to 0-1000 range
+    const clamped = Math.min(Math.max(lux, 0), 1000);
+    return clamped / 1000;
+  }
+
+  // Compute background color from lux ratio t (0-1)
+  function getBgColor(t) {
+    if (t < 0.5) {
+      // interpolate from dark to mid (0 to 0.5)
+      return lerpColor(bgDark, bgMid, t / 0.5);
+    } else {
+      // interpolate from mid to light (0.5 to 1)
+      return lerpColor(bgMid, bgLight, (t - 0.5) / 0.5);
+    }
+  }
+
+  // Compute text color: dark if bg light, light if bg dark
+  function getTextColor(t) {
+    return t > 0.5 ? textDark : textLight;
+  }
+
+  async function startSensor() {
+    if (!('AmbientLightSensor' in window)) {
+      status.textContent = 'Ambient Light Sensor API not supported on this device/browser.';
+      return;
+    }
+
+    try {
+      const sensor = new AmbientLightSensor({frequency: 1});
+      sensor.addEventListener('reading', () => {
+        const lux = sensor.illuminance;
+        const t = normalizeLux(lux);
+
+        // Update message bubble colors smoothly
+        const bg = getBgColor(t);
+        const text = getTextColor(t);
+
+        msg.style.backgroundColor = bg;
+        msg.style.color = text;
+
+        status.textContent = `Ambient light: ${lux.toFixed(1)} lux`;
+      });
+
+      sensor.addEventListener('error', event => {
+        status.textContent = `Sensor error: ${event.error.name}`;
+      });
+
+      await sensor.start();
+      status.textContent = 'Ambient Light Sensor active. Adjust lighting around you!';
+    } catch (err) {
+      if (err.name === 'SecurityError' || err.name === 'NotAllowedError') {
+        status.textContent = 'Permission denied for Ambient Light Sensor.';
+      } else {
+        status.textContent = 'Ambient Light Sensor not available.';
+      }
+    }
+  }
+
+  // Start on page load
+  window.addEventListener('load', () => {
+    startSensor();
+  });
+</script>
+
+</body>
+</html>
