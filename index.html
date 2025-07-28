@@ -1,40 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Exponential Vibration Pattern</title>
+  <title>Vibration Buttons</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 2em;
+    }
+    button {
+      display: block;
+      margin: 10px auto;
+      padding: 10px 20px;
+      font-size: 1em;
+    }
+    h2 {
+      margin-top: 2em;
+    }
+  </style>
 </head>
 <body>
-  <h2>Exponential Acceleration Vibration</h2>
-  <button onclick="startVibration()">Start</button>
+  <h1>Vibrationsbuttons</h1>
 
-  <script>
-    function startVibration() {
-      if (!("vibrate" in navigator)) {
-        alert("Vibration API not supported on this device.");
-        return;
-      }
+  <h2>Einfache Vibrationen</h2>
+  <button onclick="navigator.vibrate(100)">100 ms</button>
+  <button onclick="navigator.vibrate(200)">200 ms</button>
+  <button onclick="navigator.vibrate(300)">300 ms</button>
+  <button onclick="navigator.vibrate(400)">400 ms</button>
+  <button onclick="navigator.vibrate(500)">500 ms</button>
+  <button onclick="navigator.vibrate(600)">600 ms</button>
+  <button onclick="navigator.vibrate(700)">700 ms</button>
+  <button onclick="navigator.vibrate(800)">800 ms</button>
+  <button onclick="navigator.vibrate(900)">900 ms</button>
+  <button onclick="navigator.vibrate(1000)">1000 ms</button>
 
-      const totalTime = 8000; // total time in ms
-      const steps = 30;       // number of steps to accelerate over
+  <h2>Vibrationsmuster</h2>
+  <button onclick="navigator.vibrate([200, 100, 200])">Kurzes Doppelmuster</button>
+  <button onclick="navigator.vibrate([100, 50, 100, 50, 100])">Dreifach kurz</button>
+  <button onclick="navigator.vibrate([300, 100, 500])">Lang & kurz</button>
+  <button onclick="navigator.vibrate([500, 200, 500, 200, 500])">Langes Dreifach</button>
+  <button onclick="navigator.vibrate([100, 100, 200, 100, 100])">Symmetrisches Muster</button>
 
-      const pattern = [];
-
-      // Loop through steps, reducing vibration and pause times exponentially
-      for (let i = 0; i < steps; i++) {
-        // Ratio from 0 (start) to 1 (end)
-        const t = i / (steps - 1);
-
-        // Exponential decay of time (starts slow, ends fast)
-        const vibrateTime = 400 * Math.pow(1 - t, 2) + 30; // From ~430ms to ~30ms
-        const pauseTime   = 400 * Math.pow(1 - t, 2);      // From ~400ms to ~0ms
-
-        pattern.push(Math.round(vibrateTime));
-        pattern.push(Math.round(pauseTime));
-      }
-
-      navigator.vibrate(pattern);
-    }
-  </script>
+  <p style="margin-top: 2em; color: gray;">Hinweis: Funktioniert nur auf unterstützten Geräten mit Vibrationsmotor, z. B. Mobilgeräten.</p>
 </body>
 </html>
